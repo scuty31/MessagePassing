@@ -19,12 +19,6 @@ typedef struct DataMessage{
 	long source;
 }Message_d;
 
-typedef struct MessageType{
-	long mtype;
-	char mtext [10];
-	long source;
-}Message_t;
-
 typedef struct MultipleArg{
 	long fd;
 	long id;
@@ -124,7 +118,6 @@ void initMenu(){
 	}
 
 	if(highlight == 0){
-		sendConnection();
 		waitingRoom();
 	}
 	else{
@@ -261,7 +254,7 @@ void waitingRoom(){
 		
 		endwin();
 
-		//gameRoom();
+		gameRoom();
 	}
 
 	else{
@@ -279,17 +272,17 @@ void waitingRoom(){
 }
 
 void sendConnection(){
-	Message_t message;
+	Message_d message;
 	message.mtype = CONNECT;
 	message.source = mArg->id;
 
 	if(msgsnd(mArg->fd, &message, sizeof(message) - sizeof(long), 0))
-                        perror("msgsnd failed");
+                perror("msgsnd failed");
 }
 
 void sendMessage(){
 	Message_d message;
-	message.mtype = 1;
+	message.mtype = CONNECT;
 	message.data = mem;
 	message.source = mArg->id;
 
@@ -312,6 +305,7 @@ void* checkWaitingRoomPlayer2Status(){
 	// player2의 상태가 ready가 될 때 까지 반복
 	while(mem.wait_msg.opponent_ready == 0){
 		recieveData();
+		
 		// player2가 연결이 안되어있으면 wait 상태 표시
                 if(mem.wait_msg.opponent_connect == 1){
                 	touchwin(waiting_player2_status);
@@ -319,7 +313,7 @@ void* checkWaitingRoomPlayer2Status(){
                         wrefresh(waiting_player2_status);
                 }
 		// player2가 연결되었으면 join 상태 표시
-                else if(mem.wait_msg.opponent_ready == 1){
+                else if(mem.wait_msg.opponent_connect == 1){
                 	touchwin(waiting_player2_status);
                         mvwprintw(waiting_player2_status, 0, 0, "%s", waiting_status[1]);
                         wrefresh(waiting_player2_status);
@@ -348,6 +342,7 @@ void gameRoom(){
 	keypad(stdscr, TRUE);
 
 	refresh();
+	recieveMessage();
 
 	while(1){
 		pthread_create(&game_thread, NULL, checkGameRoomPlayer2TurnEnd, NULL);
@@ -408,7 +403,9 @@ void gameRoom(){
 				mem.game_msg.row = row;
 				mem.game_msg.col = column;
 				
-				usleep(10000);
+				sendMessage();
+
+				recieveMessage();
 
 				if(mem.game_msg.result == 1){
 					mvprintw(yStart + 15, xStart, "Win!!");
@@ -439,6 +436,7 @@ void* checkGameRoomPlayer2TurnEnd(){
 		}
 		mvprintw(i + yStart, 1 + xPoint * 15 + xStart, "|");
 	}
+	sendMessage();
 
 	refresh();
 
@@ -455,5 +453,6 @@ void* checkGameRoomPlayer2TurnEnd(){
 
 			break;
 		}
+		sendMessage();
 	}
  }
