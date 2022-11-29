@@ -221,14 +221,15 @@ void* gameRoomDataCommunication(){
 				mem2.game_msg.my_turn = 1;
 				mem1.game_msg.my_turn = 0;
 				mem1.game_msg.turn_end = 0;
+				
+				sendMessageUser1();
+                                sendMessageUser2();
 
 				turn = 1;
 
 				pthread_create(&judge_thread, NULL, judgeOmok, (void*)&turn);
 				pthread_join(judge_thread,(void*) &ret);
 				
-				sendMessageUser1();
-                                sendMessageUser2();
 				break;
 			}
 		}
@@ -244,17 +245,18 @@ void* gameRoomDataCommunication(){
 		while(1){
 			if(mem2.game_msg.turn_end == 1){
 				mem1.game_msg.omok_board[mem2.game_msg.row][mem2.game_msg.col] = 'X';
-                                mem2.game_msg.my_turn = 1;
-                                mem1.game_msg.my_turn = 0;
-                                mem1.game_msg.turn_end = 0;
- 
+                                mem1.game_msg.my_turn = 1;
+                                mem2.game_msg.my_turn = 0;
+                                mem2.game_msg.turn_end = 0;
+ 				
+				sendMessageUser1();
+                                sendMessageUser2();
+
                                 turn = 2;
  
                                 pthread_create(&judge_thread, NULL, judgeOmok, (void*)&turn);
                                 pthread_join(judge_thread,(void*) &ret);
 				
-				sendMessageUser1();
-				sendMessageUser2();
 				break;
 			}
 		}
@@ -374,5 +376,3 @@ void* judgeOmok(void* turn){
 	printf("%d", ret);
 	pthread_exit((void*)&ret);
 }
-
-

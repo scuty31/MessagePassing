@@ -1,16 +1,13 @@
 CC = gcc
-TARGET = 
+TARGET = MP_client MP_server
 
 normar: $(TARGET)
 
-shm_server: shm_server.c
-	$(CC) -o shm_server shm_server.c -lpthread
+MP_server: MP_server.c
+	$(CC) -o MP_server MP_server.c -lpthread
 
-shm_client1: shm_client1.c
-	$(CC) -o shm_client1 shm_client1.c -lpthread -lncurses
-
-shm_client2: shm_client2.c
-	$(CC) -o shm_client2 shm_client2.c -lpthread -lncurses
+MP_client: MP_client.c
+	$(CC) -o MP_client MP_client.c -lpthread -lncurses
 
 clean:
 	$(RM) $(TARGET)

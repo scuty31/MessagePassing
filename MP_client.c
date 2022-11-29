@@ -342,7 +342,7 @@ void gameRoom(){
 	keypad(stdscr, TRUE);
 
 	refresh();
-	recieveMessage();
+	recieveData();
 
 	while(1){
 		pthread_create(&game_thread, NULL, checkGameRoomPlayer2TurnEnd, NULL);
@@ -405,8 +405,7 @@ void gameRoom(){
 				
 				sendMessage();
 
-				recieveMessage();
-
+				recieveData();
 				if(mem.game_msg.result == 1){
 					mvprintw(yStart + 15, xStart, "Win!!");
 					refresh();
@@ -453,6 +452,6 @@ void* checkGameRoomPlayer2TurnEnd(){
 
 			break;
 		}
-		sendMessage();
+		recieveData();
 	}
  }
