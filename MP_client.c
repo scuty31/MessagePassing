@@ -10,8 +10,8 @@
 #include <ncurses.h>
 #include "mem.h"
 
-#define CONNECT 32768 + 1
-#define MAXOBN 1024
+#define CONNECT 327687 +1 
+#define MAXOBN 
 
 typedef struct Messagetype{
 	long mtype;
@@ -267,24 +267,25 @@ void* checkWaitingRoomPlayer2Status(){
 	
 	// player2의 상태가 ready가 될 때 까지 반복
 	while(mem->wait_msg.opponent_ready == 0){
-			// player2가 연결이 안되어있으면 wait 상태 표시
-                        if(mem->wait_msg.opponent_connect == 1){
-                                touchwin(waiting_player2_status);
-                                mvwprintw(waiting_player2_status, 0, 0, "%s", waiting_status[0]);
-                                wrefresh(waiting_player2_status);
-                        }
-			// player2가 연결되었으면 join 상태 표시
-                        else if(mem->wait_msg.opponent_ready == 1){
-                                touchwin(waiting_player2_status);
-                                mvwprintw(waiting_player2_status, 0, 0, "%s", waiting_status[1]);
-                                wrefresh(waiting_player2_status);
-                        }
+		recieveData();
+		// player2가 연결이 안되어있으면 wait 상태 표시
+                if(mem->wait_msg.opponent_connect == 1){
+                	touchwin(waiting_player2_status);
+                        mvwprintw(waiting_player2_status, 0, 0, "%s", waiting_status[0]);
+                        wrefresh(waiting_player2_status);
+                }
+		// player2가 연결되었으면 join 상태 표시
+                else if(mem->wait_msg.opponent_ready == 1){
+                	touchwin(waiting_player2_status);
+                        mvwprintw(waiting_player2_status, 0, 0, "%s", waiting_status[1]);
+                        wrefresh(waiting_player2_status);
+                }
 			// player2가 준비를 하면 ready 상태 표시
-                        if(mem->wait_msg.opponent_ready == 1){
-                                touchwin(waiting_player2_status);
-                                mvwprintw(waiting_player2_status, 0, 0, "%s", waiting_status[2]);
-                                wrefresh(waiting_player2_status);
-                        }
+                if(mem->wait_msg.opponent_ready == 1){
+                	touchwin(waiting_player2_status);
+                        mvwprintw(waiting_player2_status, 0, 0, "%s", waiting_status[2]);
+                        wrefresh(waiting_player2_status);
+                }
 	}
 	// 쓰레드 종료
 	pthread_exit(NULL);
