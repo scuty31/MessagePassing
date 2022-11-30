@@ -30,6 +30,7 @@ Room room;
 int mqid;
 
 int user;
+int ret;
 
 void initque();
 void initMemoryData();
@@ -203,7 +204,7 @@ void* waitingRoomDataCommunication(){
 }
 
 void* gameRoomDataCommunication(){
-	void* ret;
+	ret = 0;
 	int end = 0;
 
 	pthread_t judge_thread;
@@ -211,19 +212,19 @@ void* gameRoomDataCommunication(){
 	while(end == 0){
 		for(int i = 0; i< 2; i++){
 			if(i == 0){
-				mem1.game_msg.my_turn = (1-i);
+				mem1.game_msg.my_turn = 1;
 				sendMessageUser1();
 
-				mem2.game_msg.my_turn = (0+i);
+				mem2.game_msg.my_turn = 0;
 				sendMessageUser2();
 			}
 
 			if(i== 1){
-				em1.game_msg.my_turn = (1-i);
-                                sendMessageUser1();
-
-                                mem2.game_msg.my_turn = (0+i);
+				mem2.game_msg.my_turn = 1;
                                 sendMessageUser2();
+
+                                mem1.game_msg.my_turn = 0;
+                                sendMessageUser1();
 			}
 			
 			Message_d message;
@@ -241,9 +242,9 @@ void* gameRoomDataCommunication(){
 					pthread_create(&judge_thread, NULL, judgeOmok, (void*)&mem2);
 				}
 
-				pthread_join(judge_thread, (void*) &ret);
+				pthread_join(judge_thread, NULL);
 
-				if(*(int*)ret == 1){
+				if(ret == 1){
 					if(i == 0){
 						mem1.game_msg.result = 1;
 						sendMessageUser1();
@@ -313,7 +314,7 @@ void* judgeOmok(void* m){
 		if(cnt == 5){
 			if(board[i + 1][col] != '0'){
 				ret = 1;
-				pthread_exit((void*)&ret);
+				pthread_exit(NULL);
 			}
 		}
 	}
@@ -326,7 +327,7 @@ void* judgeOmok(void* m){
 		if(cnt == 5){
 			if(board[row][i + 1] != 'O'){
 				ret = 1;
-				pthread_exit((void*)&ret);
+				pthread_exit(NULL);
 			}
 		}
 	}
@@ -343,7 +344,7 @@ void* judgeOmok(void* m){
 			if(cnt == 5){
 				if(board[i][col + 1] != 'O'){
 					ret = 1;
-					pthread_exit((void*)&ret);
+					pthread_exit(NULL);
 				}
 			}
 		}
@@ -359,7 +360,7 @@ void* judgeOmok(void* m){
 			if(start_col < 15 && cnt == 5){
 				if(board[start_row + i + 1][start_col + i] != 'O'){
 					ret = 1;
-					pthread_exit((void*)&ret);
+					pthread_exit(NULL);
 				}
 			}
 		}
@@ -375,12 +376,12 @@ void* judgeOmok(void* m){
 		if(start_row - i - 1 >= 0 && cnt == 5){
 			if(board[start_row - i - 1][i + 1] != 'O'){
 				ret = 1;
-				pthread_exit((void*)&ret);
+				pthread_exit(NULL);
 			}
 		}
 	}
 
 	ret = 0;
 	printf("%d", ret);
-	pthread_exit((void*)&ret);
+	pthread_exit(NULL);
 }

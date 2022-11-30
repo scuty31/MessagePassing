@@ -340,7 +340,8 @@ void gameRoom(){
 	int xStart = 5, yStart = 3;
 	int i, k, xPoint = 3;
 	int row = 0, column = 0;
-	
+	ret = 0;
+
 	move(yStart, xStart + 2);
 	keypad(stdscr, TRUE);
 	
@@ -362,7 +363,7 @@ void gameRoom(){
 			pthread_create(&game_thread, NULL, checkGameRoomPlayer2TurnEnd, NULL);
 			pthread_join(game_thread, NULL);
 			printOmokBoard();
-		
+			
 			if(ret == 1){
 				mvprintw(yStart + 15, xStart, "Lose...");
 				refresh();
@@ -426,10 +427,8 @@ void gameRoom(){
 			
 						printOmokBoard();
 
-						usleep(10000);
-				
 						recieveData();
-
+						
 						if(mem.game_msg.result == 1){
 							mvprintw(yStart + 15, xStart, "Win!!");
 							refresh();
@@ -442,8 +441,7 @@ void gameRoom(){
 						endwin();
 						return;
 						}
-					
-				break;
+						break;
 					}
 				}
 			}
@@ -469,7 +467,6 @@ void* checkGameRoomMyturn(){
 	ret = 0;
 
 	recieveData();
-
 	if(mem.game_msg.my_turn == 1){
 		ret = 1;
 		
@@ -485,6 +482,7 @@ void* checkGameRoomPlayer2TurnEnd(){
 	recieveData();
 
 	mem.game_msg.omok_board[mem.game_msg.row][mem.game_msg.col] = 'X';
+
 	if(mem.game_msg.result==2){
 		ret = 1;
 		pthread_exit(NULL);
