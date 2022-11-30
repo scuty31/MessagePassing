@@ -26,7 +26,6 @@ typedef struct Room{
 
 data_buf mem1;
 data_buf mem2;
-data_buf mem;
 Room room;
 int mqid;
 
@@ -139,7 +138,6 @@ void recieveData(){
 		perror("msgrcv failed");
 	}
 	else{
-		mem = message.data;
 		if(message.source == room.clients[0])
 			mem1 = message.data;	
 		else if(message.source == room.clients[1])
@@ -206,123 +204,127 @@ void* waitingRoomDataCommunication(){
 
 void* gameRoomDataCommunication(){
 	void* ret;
-	int turn;
-	double accum;
+	int end = 0;
 
 	pthread_t judge_thread;
 	
-	mem1.game_msg.my_turn = 1;
-	sendMessageUser1();
-	
-	mem2.game_msg.my_turn = 0;
-	sendMessageUser2();
-	while(1){
-		
-		recieveData();
-		while(1){
+	while(end == 0){
+		for(int i = 0; i< 2; i++){
+			if(i == 0){
+				mem1.game_msg.my_turn = (1-i);
+				sendMessageUser1();
+
+				mem2.game_msg.my_turn = (0+i);
+				sendMessageUser2();
+			}
+
+			if(i== 1){
+				em1.game_msg.my_turn = (1-i);
+                                sendMessageUser1();
+
+                                mem2.game_msg.my_turn = (0+i);
+                                sendMessageUser2();
+			}
 			
-			if(mem1.game_msg.turn_end == 1){
-				mem2.game_msg.omok_board[mem1.game_msg.row][mem1.game_msg.col] = 'X';
-				mem2.game_msg.my_turn = 1;
-				mem1.game_msg.my_turn = 0;
-				mem1.game_msg.turn_end = 0;
-				
-				sendMessageUser1();
-                                sendMessageUser2();
-
-				turn = 1;
-
-				pthread_create(&judge_thread, NULL, judgeOmok, (void*)&turn);
-				pthread_join(judge_thread,(void*) &ret);
-				
-				break;
+			Message_d message;
+	
+			if((msgrcv(mqid, &message, sizeof(message) - sizeof(long), CONNECT, 0))<0){
+				perror("msgrcv failed");
 			}
-		}
-		if(*(int*)ret == 1){
-			mem1.game_msg.result = 1;
-			mem2.game_msg.result = 2;
+			else{
+				if(message.source == room.clients[0]){
+					mem1 = message.data;
+					pthread_create(&judge_thread, NULL, judgeOmok, (void*)&mem1);
+				}
+				else if(message.source == room.clients[1]){
+					mem2 = message.data;
+					pthread_create(&judge_thread, NULL, judgeOmok, (void*)&mem2);
+				}
 
-			sendMessageUser1();
-			sendMessageUser2();
-			break;
-		}
+				pthread_join(judge_thread, (void*) &ret);
 
-		recieveData();
-		while(1){
-			if(mem2.game_msg.turn_end == 1){
-				mem1.game_msg.omok_board[mem2.game_msg.row][mem2.game_msg.col] = 'X';
-                                mem1.game_msg.my_turn = 1;
-                                mem2.game_msg.my_turn = 0;
-                                mem2.game_msg.turn_end = 0;
- 				
-				sendMessageUser1();
-                                sendMessageUser2();
+				if(*(int*)ret == 1){
+					if(i == 0){
+						mem1.game_msg.result = 1;
+						sendMessageUser1();
 
-                                turn = 2;
- 
-                                pthread_create(&judge_thread, NULL, judgeOmok, (void*)&turn);
-                                pthread_join(judge_thread,(void*) &ret);
-				
-				break;
+						mem2.game_msg.row = mem1.game_msg.row;
+						mem2.game_msg.col = mem1.game_msg.col;
+						mem2.game_msg.result = 2;
+						sendMessageUser2();
+
+						end = 1;
+					}
+					else{
+						mem2.game_msg.result = 1;
+						sendMessageUser2();
+
+						mem1.game_msg.row = mem2.game_msg.row;
+						mem1.game_msg.col = mem2.game_msg.col;
+						mem1.game_msg.result = 2;
+						sendMessageUser1();
+
+						end = 1;
+					}
+					break;
+				}
+				else{
+					if(i == 0){
+						mem1.game_msg.result = 0;
+						sendMessageUser1();
+
+						mem2.game_msg.row = mem1.game_msg.row;
+                                                mem2.game_msg.col = mem1.game_msg.col;
+                                                sendMessageUser2();
+					}
+					else{
+						mem2.game_msg.result = 0;
+                                                sendMessageUser2();
+
+                                                mem1.game_msg.row = mem2.game_msg.row;
+                                                mem1.game_msg.col = mem2.game_msg.col;
+                                                sendMessageUser1();
+					}
+				}
 			}
-		}
-
-		if(*(int*)ret == 1){
-			mem2.game_msg.result = 1;
-			mem1.game_msg.result = 2;
-
-			sendMessageUser1();
-                        sendMessageUser2();
-
-			break;
 		}
 	}
-
-}
-
-void* judgeOmok(void* turn){
-	int i, k, cnt = 0, t = *((int*)turn);
+}	
+					
+void* judgeOmok(void* m){
+	int i, k, cnt = 0;
 	int row, col, ret = 0;
 	char board[ROW][COLUMN];
 
-	if(t == 1){
-		for(i = 0; i<ROW; i++){
-			for(k = 0; k<COLUMN; k++){
-				board[i][k] = mem1.game_msg.omok_board[i][k];
-			}
-		}
-		row = mem1.game_msg.row;
-		col = mem1.game_msg.col;
-	}
-	else{
-		for(i=0; i<ROW; i++){
-			for(k=0; k<COLUMN; k++){
-				board[i][k] = mem2.game_msg.omok_board[i][k];
-			}
-		}
-		row = mem2.game_msg.row;
-		col = mem2.game_msg.col;
-	}
+	data_buf mem = *((data_buf*)m);
 	
-	for(i = 9; i<ROW; i++){
+	for(i = 0; i<ROW; i++){
+		for(k = 0; k<COLUMN; k++){
+			board[i][k] = mem.game_msg.omok_board[i][k];
+		}
+	}
+	row = mem.game_msg.row;
+	col = mem.game_msg.col;
+	
+	for(i=0; i<ROW; i++){
 		if(board[i][col] == 'O') cnt++;
 		else cnt = 0;
 
 		if(cnt == 5){
-			if(board[i+1][col] != 'O'){
+			if(board[i + 1][col] != '0'){
 				ret = 1;
 				pthread_exit((void*)&ret);
 			}
 		}
 	}
 
-	cnt=0;
-	for(i=0; i<COLUMN; i++){
+	cnt = 0;
+	for(i = 0; i< COLUMN; i++){
 		if(board[row][i] == 'O') cnt++;
 		else cnt = 0;
 
 		if(cnt == 5){
-			if(board[row][i+1] != 'O'){
+			if(board[row][i + 1] != 'O'){
 				ret = 1;
 				pthread_exit((void*)&ret);
 			}
@@ -334,12 +336,12 @@ void* judgeOmok(void* turn){
 		cnt = 0;
 		start_row = row - col;
 		start_col = 0;
-		for(i = 0; start_row + 1 < 15; i++){
-			if(board[start_row + i][start_col + i] == 'O')cnt++;
+		for(i = 0; start_row + i < 15; i++){
+			if(board[start_row + i][start_col + i] == 'O') cnt++;
 			else cnt = 0;
 
 			if(cnt == 5){
-				if(board[i][col+1] != 'O'){
+				if(board[i][col + 1] != 'O'){
 					ret = 1;
 					pthread_exit((void*)&ret);
 				}
@@ -350,15 +352,15 @@ void* judgeOmok(void* turn){
 		cnt = 0;
 		start_row = 0;
 		start_col = col - row;
-		for(i = 0; start_col + i < 15; i++){
+		for(i = 0; start_col + 1 < 15; i++){
 			if(board[start_row + i][start_col + i] == 'O') cnt++;
 			else cnt = 0;
 
 			if(start_col < 15 && cnt == 5){
-				 if(board[start_row + i + 1][start_col + i] != 'O'){
-	                                  ret = 1;
-	                                  pthread_exit((void*)&ret);
-				 }
+				if(board[start_row + i + 1][start_col + i] != 'O'){
+					ret = 1;
+					pthread_exit((void*)&ret);
+				}
 			}
 		}
 	}
@@ -367,15 +369,15 @@ void* judgeOmok(void* turn){
 	start_col = 0;
 	cnt = 0;
 	for(i = 0; start_row - i < 0; i++){
-		if(board[start_row - i][i] == 'O') cnt++;
+		if(board[start_row -i][i] == 'O') cnt++;
 		else cnt = 0;
 
 		if(start_row - i - 1 >= 0 && cnt == 5){
-                          if(board[start_row - i - 1][i + 1] != 'O'){
-                                  ret = 1;
-                                  pthread_exit((void*)&ret);
-                          }
-                  }
+			if(board[start_row - i - 1][i + 1] != 'O'){
+				ret = 1;
+				pthread_exit((void*)&ret);
+			}
+		}
 	}
 
 	ret = 0;

@@ -39,12 +39,12 @@ void printOmokBoard();
 void* checkGameRoomMyturn();
 
 
-pthread_t waiting_thread, game_thread;
+pthread_t waiting_thread, game_thread, check_myturn_thread;
 data_buf mem;
 MultipleArg* mArg;
 
 char* waiting_status[] = {"Wait", "Join", "Ready"};
-int quit = 0;
+int ret  = 0;
 
 WINDOW* waiting_player2_status;
 
@@ -150,11 +150,6 @@ void initMemoryData(){
 	mem.game_msg.row = 0;
 	mem.game_msg.col = 0;
 	mem.game_msg.turn_end = 0;
-
-	for(int i = 0; i < ROW; i++){
-		for(int k = 0; k < COLUMN; k++)
-			mem.game_msg.omok_board[i][k] = '+';
-	}
 }
 
 void waitingRoom(){
@@ -345,26 +340,30 @@ void gameRoom(){
 	int xStart = 5, yStart = 3;
 	int i, k, xPoint = 3;
 	int row = 0, column = 0;
-	void* ret;
-
-	pthread_t check_myturn_thread, check_opturn_end_thread;
-
+	
 	move(yStart, xStart + 2);
 	keypad(stdscr, TRUE);
 	
+	for(i = 0; i<ROW; i++){
+		for(k = 0; k<COLUMN; k++){
+			mem.game_msg.omok_board[i][k] = '+';
+		}
+	}
+
 	printOmokBoard();
+	
+	recieveData();
 
 	while(1){
 		pthread_create(&check_myturn_thread, NULL, checkGameRoomMyturn, NULL);
-		pthread_join(check_myturn_thread, &ret);
-		mvprintw(2,0, "%d",*(int*)ret);
-		refresh();
-		if(*(int*)ret == 0){
-			pthread_create(&check_opturn_end_thread, NULL, checkGameRoomPlayer2TurnEnd, NULL);
-			pthread_join(check_opturn_end_thread, &ret);
+		pthread_join(check_myturn_thread, NULL);
+		
+		if(ret == 0){
+			pthread_create(&game_thread, NULL, checkGameRoomPlayer2TurnEnd, NULL);
+			pthread_join(game_thread, NULL);
 			printOmokBoard();
 		
-			if(*(int*)ret == 1){
+			if(ret == 1){
 				mvprintw(yStart + 15, xStart, "Lose...");
 				refresh();
 
@@ -467,34 +466,28 @@ void printOmokBoard(){
 }
 
 void* checkGameRoomMyturn(){
-	int ret = 0;
+	ret = 0;
 
-	mvprintw(0, 0, "%d", ret);
-	refresh();
 	recieveData();
 
-	mvprintw(5, 0, "%d", mem.game_msg.my_turn);
-	refresh();
 	if(mem.game_msg.my_turn == 1){
 		ret = 1;
-		mvprintw(3, 0, "%d", ret);
-		refresh();
-		pthread_exit((void*)&ret);
+		
+		pthread_exit(NULL);
 	}
-	mvprintw(1, 0, "%d", ret);
-	refresh();
-	pthread_exit((void*)&ret);
+
+	pthread_exit(NULL);
 }
 
 void* checkGameRoomPlayer2TurnEnd(){
-	int ret = 0;
+	ret = 0;
 	
 	recieveData();
 
 	mem.game_msg.omok_board[mem.game_msg.row][mem.game_msg.col] = 'X';
 	if(mem.game_msg.result==2){
 		ret = 1;
-		pthread_exit((void*)&ret);
+		pthread_exit(NULL);
 	}
-	pthread_exit((void*)&ret);
+	pthread_exit(NULL);
 }
