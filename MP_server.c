@@ -208,14 +208,19 @@ void* gameRoomDataCommunication(){
 	void* ret;
 	int turn;
 	double accum;
+
 	pthread_t judge_thread;
 	
 	mem1.game_msg.my_turn = 1;
 	sendMessageUser1();
-
+	
+	mem2.game_msg.my_turn = 0;
+	sendMessageUser2();
 	while(1){
 		
+		recieveData();
 		while(1){
+			
 			if(mem1.game_msg.turn_end == 1){
 				mem2.game_msg.omok_board[mem1.game_msg.row][mem1.game_msg.col] = 'X';
 				mem2.game_msg.my_turn = 1;
@@ -242,6 +247,7 @@ void* gameRoomDataCommunication(){
 			break;
 		}
 
+		recieveData();
 		while(1){
 			if(mem2.game_msg.turn_end == 1){
 				mem1.game_msg.omok_board[mem2.game_msg.row][mem2.game_msg.col] = 'X';
