@@ -3,33 +3,27 @@
 #include <unistd.h>
 #include <string.h>
 #include <ncurses.h>
-#include <signal.h>
 #include <pthread.h>
+#include <errno.h>
 #include <sys/msg.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
-#include <errno.h>
 #include "mem.h"
 
 #define CONNECT 32768+1
 
-typedef struct DataMessage{
+typedef struct Message{
 	long mtype;
 	struct data_buf data;
-	long source;
-}Message_d;
-
-typedef struct Room{
-	long clients[2];
-}Room;
+	int source;
+}Message;
 
 
 data_buf mem1;
 data_buf mem2;
-Room room;
 int mqid;
+int pid[2];
 
-int user;
 int ret;
 
 void initque();
@@ -103,21 +97,21 @@ void initMemoryData(){
 }
 
 void recieveConnection(){
-	Message_d message;
+	Message message;
 	int i;
 	for(i=0; i<2; i++){	
 		if((msgrcv(mqid, &message, sizeof(message) - sizeof(long), CONNECT, 0)) < 0)
 			perror("msgrcv failed");
 		else{
-			room.clients[i] = message.source;
+			pid[i] = message.source;
 			printf("player %d connect\n", i+1);
 		}
 	}
 }
 
 void sendMessageUser1(){
-	Message_d message;
-	message.mtype = room.clients[0];
+	Message message;
+	message.mtype = pid[0];
 	message.data = mem1;
 	
 	if(msgsnd(mqid, &message, sizeof(message) - sizeof(long), 0))	
@@ -125,8 +119,8 @@ void sendMessageUser1(){
 }
 
 void sendMessageUser2(){
-	Message_d message;
-        message.mtype = room.clients[1];
+	Message message;
+        message.mtype = pid[1];
         message.data = mem2;
 
 	if(msgsnd(mqid, &message, sizeof(message) - sizeof(long), 0))
@@ -134,14 +128,14 @@ void sendMessageUser2(){
 }
 
 void recieveData(){
-	Message_d message;
+	Message message;
 	if((msgrcv(mqid, &message, sizeof(message) - sizeof(long), CONNECT, 0))<0){
 		perror("msgrcv failed");
 	}
 	else{
-		if(message.source == room.clients[0])
+		if(message.source == pid[0])
 			mem1 = message.data;	
-		else if(message.source == room.clients[1])
+		else if(message.source == pid[1])
 			mem2 = message.data;
 		else
 			perror("msgrcv source error");
@@ -227,17 +221,17 @@ void* gameRoomDataCommunication(){
                                 sendMessageUser1();
 			}
 			
-			Message_d message;
+			Message message;
 	
 			if((msgrcv(mqid, &message, sizeof(message) - sizeof(long), CONNECT, 0))<0){
 				perror("msgrcv failed");
 			}
 			else{
-				if(message.source == room.clients[0]){
+				if(message.source == pid[0]){
 					mem1 = message.data;
 					pthread_create(&judge_thread, NULL, judgeOmok, (void*)&mem1);
 				}
-				else if(message.source == room.clients[1]){
+				else if(message.source == pid[1]){
 					mem2 = message.data;
 					pthread_create(&judge_thread, NULL, judgeOmok, (void*)&mem2);
 				}
